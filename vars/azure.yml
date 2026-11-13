@@ -1,0 +1,28 @@
+---
+# Azure location and resource names
+azure_location: "West US"
+azure_resource_group: "cs320-week10-rg"
+azure_vm_size: Standard_B2pls_v2
+
+azure_vnet_name: "cs320-week10-vnet"
+azure_subnet_name: "cs320-week10-subnet"
+azure_nsg_name: "cs320-week10-nsg"
+azure_public_ip_name: "cs320-week10-pip"
+azure_nic_name: "cs320-week10-nic"
+azure_vm_name: "cs320-week10-vm"
+
+# Private network address range
+azure_vnet_cidr: "10.0.0.0/16"
+azure_subnet_cidr: "10.0.1.0/24"
+
+# VM login and existing SSH-key locations
+azure_admin_username: azureuser
+azure_ssh_public_key_file: "{{ lookup('env', 'HOME') }}/.ssh/cs320_azure.pub"
+azure_ssh_private_key_file: "{{ lookup('env', 'HOME') }}/.ssh/cs320_azure"
+
+# Ubuntu image compatible with the Arm64 VM
+azure_image: 
+  publisher: Canonical
+  offer: Ubuntu-24.04-lts
+  sku: server_arm64
+  version: latest

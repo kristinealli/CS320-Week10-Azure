@@ -1,0 +1,10 @@
+.venv/
+collections/
+__pycache__/
+*.retry
+.vault-password
+.vault-password*
+.env
+.azure/
+*.prem
+*.key

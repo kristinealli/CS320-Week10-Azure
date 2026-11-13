@@ -1,0 +1,14 @@
+
+PLAY [Test Azure connection] ***************************************************
+
+TASK [Read Azure resource groups] **********************************************
+ok: [localhost]
+
+TASK [Confirm connection] ******************************************************
+ok: [localhost] => {
+    "msg": "Successfully connected to Azure. Found 0 resource groups."
+}
+
+PLAY RECAP *********************************************************************
+localhost                  : ok=2    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+

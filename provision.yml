@@ -1,0 +1,37 @@
+---
+- name: Provision Azure WordPress infrastructure
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  vars_files:
+    - vars/azure.yml
+
+  vars:
+    ansible_python_interpreter: "{{ ansible_playbook_python }}"
+
+  tasks:
+    - name: Create Azure resource group
+      azure.azcollection.azure_rm_resourcegroup:
+        auth_source: cli
+        name: "{{ azure_resource_group }}"
+        location: "{{ azure_location }}"
+        state: present
+
+    - name: Create the virtual network
+      azure.azcollection.azure_rm_virtualnetwork:
+        auth_source: cli
+        resource_group: "{{ azure_resource_group }}"
+        name: "{{ azure_vnet_name }}"
+        location: "{{ azure_location }}"
+        address_prefix_cidr: "{{ azure_vnet_cidr }}"
+        state: present
+
+    - name: Create the subnet
+      azure.azcollection.azure_rm_subnet:
+        auth_source: cli
+        resource_group: "{{ azure_resource_group }}"
+        virtual_network_name: "{{ azure_vnet_name }}"
+        name: "{{ azure_subnet_name }}"
+        address_prefix_cidr: "{{ azure_subnet_cidr }}"
+        state: present

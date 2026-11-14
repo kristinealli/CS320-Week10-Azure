@@ -1,0 +1,101 @@
+---
+- name: Verify Azure WordPress infrastructure
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - vars/azure.yml
+  vars:
+    ansible_python_interpreter: "{{ ansible_playbook_python }}"
+
+  tasks:
+    - name: Read the assignment resource group
+      azure.azcollection.azure_rm_resourcegroup_info:
+        auth_source: cli
+        name: "{{ azure_resource_group }}"
+      register: azure_resource_group_info
+
+    - name: Confirm the resource group exists
+      ansible.builtin.assert:
+        that:
+          - azure_resource_group_info.resourcegroups | length == 1
+        fail_msg: "Azure resource group {{ azure_resource_group }} was not found."
+
+    - name: Read resources in the assignment resource group
+      ansible.builtin.command:
+        argv:
+          - az
+          - resource
+          - list
+          - --resource-group
+          - "{{ azure_resource_group }}"
+          - --query
+          - "[].type"
+          - --output
+          - tsv
+      register: azure_resource_types
+      changed_when: false
+
+    - name: Confirm the expected Azure resources exist
+      ansible.builtin.assert:
+        that:
+          - "'Microsoft.Network/virtualNetworks' in azure_resource_types.stdout_lines"
+          - "'Microsoft.Network/networkInterfaces' in azure_resource_types.stdout_lines"
+          - "'Microsoft.Network/publicIPAddresses' in azure_resource_types.stdout_lines"
+          - "'Microsoft.Network/networkSecurityGroups' in azure_resource_types.stdout_lines"
+          - "'Microsoft.Compute/virtualMachines' in azure_resource_types.stdout_lines"
+        fail_msg: "One or more expected Azure resources are missing."
+
+    - name: Check HTTP reachability from the control system
+      ansible.builtin.uri:
+        url: "http://{{ wordpress.domain }}/"
+        return_content: true
+        status_code: [200, 301, 302]
+      register: wordpress_http
+
+    - name: Confirm the HTTP response contains WordPress content
+      ansible.builtin.assert:
+        that:
+          - wordpress_http.content is search("(?i)wordpress")
+        fail_msg: "The public HTTP response did not contain WordPress content."
+
+- name: Verify the WordPress VM
+  hosts: wordpress
+  become: true
+  gather_facts: false
+
+  tasks:
+    - name: Check required services
+      ansible.builtin.service_facts:
+
+    - name: Find the installed PHP-FPM service
+      ansible.builtin.set_fact:
+        php_fpm_services: >-
+          {{
+            ansible_facts.services
+            | dict2items
+            | selectattr('key', 'search', '^php[0-9.]+-fpm\.service$')
+            | list
+          }}
+
+    - name: Confirm required services are running and enabled
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.services['nginx.service'].state == 'running'
+          - ansible_facts.services['mariadb.service'].state == 'running'
+          - ansible_facts.services['nginx.service'].status == 'enabled'
+          - ansible_facts.services['mariadb.service'].status == 'enabled'
+          - php_fpm_services | length == 1
+          - php_fpm_services[0].value.state == 'running'
+          - php_fpm_services[0].value.status == 'enabled'
+        fail_msg: "NGINX, MariaDB, or PHP-FPM is not running and enabled."
+
+    - name: Check WordPress installation
+      ansible.builtin.command:
+        argv:
+          - /usr/local/bin/wp
+          - core
+          - is-installed
+          - --path=/var/www/wordpress
+      become_user: wordpress
+      changed_when: false

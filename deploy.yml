@@ -1,0 +1,10 @@
+---
+- name: Deploy WordPress to Azure Ubuntu VM
+  hosts: wordpress
+  become: true
+  gather_facts: true
+
+  roles: 
+    - stack_install
+    - stack_config
+    - wordpress

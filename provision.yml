@@ -24,7 +24,7 @@
         resource_group: "{{ azure_resource_group }}"
         name: "{{ azure_vnet_name }}"
         location: "{{ azure_location }}"
-        address_prefix_cidr: "{{ azure_vnet_cidr }}"
+        address_prefixes_cidr: "{{ azure_vnet_cidr }}"
         state: present
 
     - name: Create the subnet
@@ -34,4 +34,74 @@
         virtual_network_name: "{{ azure_vnet_name }}"
         name: "{{ azure_subnet_name }}"
         address_prefix_cidr: "{{ azure_subnet_cidr }}"
+        state: present
+
+    - name: Create network security group
+      azure.azcollection.azure_rm_securitygroup:
+        auth_source: cli
+        resource_group: "{{ azure_resource_group }}"
+        name: "{{ azure_nsg_name }}"
+        location: "{{ azure_location }}"
+        purge_rules: true
+        rules: 
+          - name: AllowSSH
+            protocol: Tcp
+            direction: Inbound
+            access: Allow
+            priority: 100
+            source_address_prefix: "{{ azure_ssh_source_cidr }}"
+            destination_port_range: "22"
+
+          - name: AllowHTTP
+            protocol: Tcp
+            direction: Inbound
+            access: Allow
+            priority: 110
+            source_address_prefix: "*"
+            destination_port_range: "80"
+        state: present
+
+    - name: Create public IP address
+      azure.azcollection.azure_rm_publicipaddress:
+        auth_source: cli
+        resource_group: "{{ azure_resource_group }}"
+        name: "{{ azure_public_ip_name }}"
+        location: "{{ azure_location }}" 
+        allocation_method: Static
+        sku: Standard
+        state: present
+
+    - name: Create network interface
+      azure.azcollection.azure_rm_networkinterface:
+        auth_source: cli
+        resource_group: "{{ azure_resource_group }}"
+        name: "{{ azure_nic_name }}"
+        location: "{{ azure_location }}" 
+        virtual_network: "{{ azure_vnet_name }}"
+        subnet_name: "{{ azure_subnet_name }}" 
+        security_group: "{{ azure_nsg_name}}"
+        ip_configurations: 
+          - name: ipconfig1
+            public_ip_address_name: "{{ azure_public_ip_name }}"
+            primary: true
+        state: present
+
+    - name: Create Ubuntu virtual machine
+      azure.azcollection.azure_rm_virtualmachine:
+        auth_source: cli
+        resource_group: "{{ azure_resource_group }}"
+        name: "{{ azure_vm_name }}"
+        location: "{{ azure_location }}"
+        vm_size: "{{azure_vm_size }}"
+        admin_username: "{{ azure_admin_username }}"
+        ssh_password_enabled: false
+        ssh_public_keys: 
+          - path: "/home/{{ azure_admin_username }}/.ssh/authorized_keys"
+            key_data: "{{ lookup('file', azure_ssh_public_key_file) }}"
+        network_interfaces: 
+          - "{{ azure_nic_name }}"
+        image: "{{ azure_image }}"
+        managed_disk_type: Standard_LRS
+        boot_diagnostics:
+          enabled: false
         state: present

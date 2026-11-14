@@ -23,6 +23,9 @@ azure_ssh_private_key_file: "{{ lookup('env', 'HOME') }}/.ssh/cs320_azure"
 # Ubuntu image compatible with the Arm64 VM
 azure_image: 
   publisher: Canonical
-  offer: Ubuntu-24.04-lts
-  sku: server_arm64
-  version: latest
+  offer: ubuntu-24_04-lts
+  sku: server-arm64
+  version: "24.04.202610250"
+
+# SSH access
+azure_ssh_source_cidr: "192.158.27.86/32"
